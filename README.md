@@ -30,22 +30,22 @@ separate clinician review interface.
 
 ## Key features
 
-- **Per-vertex 3D pain painting** — paint, erase, and undo on a male or female anatomical model,
+- **Per-vertex 3D pain painting** - paint, erase, and undo on a male or female anatomical model,
   with three intensity levels and normal-gating so you can't paint "through" the body.
-- **Dermatome mapping engine** — every vertex is linked to a dermatome (C1–S5) via a compact
+- **Dermatome mapping engine** - every vertex is linked to a dermatome (C1–S5) via a compact
   `.u8` map; painting therefore translates directly into per-dermatome statistics.
-- **Coverage analysis** — weighted pain burden, area share, local involvement, mean intensity,
+- **Coverage analysis** - weighted pain burden, area share, local involvement, mean intensity,
   segmental spread and overlap flags, ranked per dermatome (VTK-free pure-computation core).
-- **Clinician review** — replay a saved session, toggle between the painted model and the
+- **Clinician review** - replay a saved session, toggle between the painted model and the
   dermatome-region view, click to identify a dermatome, and overlay multiple sessions to compare.
-- **Pain-pattern report** — a rule-based summary of dermatome involvement + questionnaire answers,
+- **Pain-pattern report** - a rule-based summary of dermatome involvement + questionnaire answers,
   surfacing patterns and patient-reported red flags for clinician correlation.
-- **Structured questionnaire** — VAS scores, pain character, aggravating/alleviating factors,
+- **Structured questionnaire** - VAS scores, pain character, aggravating/alleviating factors,
   associated symptoms, life impact and more.
-- **Tablet-first interaction** — stylus painting, two-finger pinch-zoom / pan / rotate, an
+- **Tablet-first interaction** - stylus painting, two-finger pinch-zoom / pan / rotate, an
   on-screen gesture guide, and an auto-popup virtual keyboard.
 - **Bilingual UI** (English / Hebrew) with live language switching and RTL layout support.
-- **Session persistence** — each session is saved as JSON + a human-readable summary +
+- **Session persistence** - each session is saved as JSON + a human-readable summary +
   front/back screenshots.
 
 ---
