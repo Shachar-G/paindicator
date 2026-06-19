@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="files/pictures/HD Logo.png" alt="PAINDICATOR logo" width="120"/>
+<img src="files/pictures/HD Logo.png" alt="PAINDICATOR logo" width="300"/>
 
 # PAINDICATOR
 
