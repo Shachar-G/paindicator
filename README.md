@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="files/pictures/HD Logo.png" alt="PAINDICATOR logo" width="1000"/>
+<img src="docs/logo.png" alt="PAINDICATOR — Map Your Pain" width="460"/>
 
 # PAINDICATOR
 
