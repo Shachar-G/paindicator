@@ -28,6 +28,21 @@ separate clinician review interface.
 
 ---
 
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/welcome.png" alt="Role selection"/><br/><sub><b>Role selection</b> — guided patient or clinician entry</sub></td>
+    <td width="50%"><img src="docs/screenshots/painting-front.png" alt="Pain painting (front)"/><br/><sub><b>Pain painting</b> — per-vertex paint with intensity levels</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/painting-back.png" alt="Pain painting (back)"/><br/><sub><b>Posterior view</b> — rotate and paint the whole body</sub></td>
+    <td><img src="docs/screenshots/clinician-analysis.png" alt="Dermatome coverage analysis"/><br/><sub><b>Clinician view</b> — dermatome coverage analysis</sub></td>
+  </tr>
+</table>
+
+---
+
 ## Key features
 
 - **Per-vertex 3D pain painting** - paint, erase, and undo on a male or female anatomical model,
