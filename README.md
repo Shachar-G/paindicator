@@ -107,6 +107,12 @@ maps cleanly onto dermatomes — the model topology and the `.u8` map share the 
 
 ---
 
+## Project Poster
+
+[View Full Poster (PDF)](docs/Paindicator%20-%20Poster%20-%20V3.pdf)
+
+---
+
 ## Getting started
 
 Requires **Python 3.11** on Windows.
