@@ -52,34 +52,50 @@ class BaseScreen(QWidget):
         self.setAutoFillBackground(True)
         self.setPalette(palette)
 
-    def create_button(self, text: str, min_width: int = 300, min_height: int = 70) -> QPushButton:
+    # Button variant palettes: (bg, bg_hover/pressed, text, border)
+    _BUTTON_VARIANTS = {
+        "primary":   (theme.PRIMARY,       theme.PRIMARY_DARK, theme.TEXT_ON_PRIMARY, "none"),
+        "secondary": ("transparent",       theme.PRIMARY_LIGHT, theme.PRIMARY_DARK,
+                      f"2px solid {theme.PRIMARY}"),
+        "danger":    (theme.DANGER,        theme.DANGER_DARK,  theme.TEXT_ON_PRIMARY, "none"),
+    }
+
+    def create_button(self, text: str, min_width: int = 300, min_height: int = 70,
+                      variant: str = "primary") -> QPushButton:
         """
         Creates a QPushButton with the standard application styling.
+
+        variant: "primary" (filled teal, default), "secondary" (outlined),
+                 or "danger" (filled red, for destructive actions).
         """
         btn = QPushButton(text)
         btn.setMinimumSize(scale.sc(min_width), scale.sc(min_height))
         font_family = "Nunito" if self.nunito_font else "Arial"  # Fallback font
 
+        bg, bg_active, fg, border = self._BUTTON_VARIANTS.get(
+            variant, self._BUTTON_VARIANTS["primary"])
+
         btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {theme.PRIMARY};
-                color: white;
+                background-color: {bg};
+                color: {fg};
                 font-family: '{font_family}';
-                font-size: {scale.sc(22)}px;
+                font-size: {scale.sc(theme.FONT_H2)}px;
                 font-weight: 500;
-                border-radius: 10px;
-                padding: 10px;
-                border: none;
+                border-radius: {scale.sc(theme.RADIUS_MD)}px;
+                padding: {scale.sc(10)}px;
+                border: {border};
             }}
             QPushButton:hover {{
-                background-color: {theme.PRIMARY_DARK};
+                background-color: {bg_active};
             }}
             QPushButton:pressed {{
-                background-color: {theme.PRIMARY_DARK};
+                background-color: {bg_active};
             }}
             QPushButton:disabled {{
-                background-color: #B0B8C1;
-                color: #E8ECEF;
+                background-color: {theme.DISABLED_BG};
+                color: {theme.DISABLED_TEXT};
+                border: none;
             }}
         """)
         return btn

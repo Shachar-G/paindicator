@@ -7,7 +7,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from .base_screen import BaseScreen
 from codes.translations import t
-from codes import scale
+from codes import scale, theme
 
 
 class ClinicianNameScreen(BaseScreen):
@@ -34,7 +34,7 @@ class ClinicianNameScreen(BaseScreen):
             title_font.setPointSize(scale.sc(28))
             title_font.setBold(True)
             self.label.setFont(title_font)
-        self.label.setStyleSheet("color: #333;")
+        self.label.setStyleSheet(f"color: {theme.TEXT_PRIMARY};")
 
         # Input Field
         self.name_input = QLineEdit(self)
@@ -50,15 +50,15 @@ class ClinicianNameScreen(BaseScreen):
         self.name_input.setStyleSheet(f"""
             QLineEdit {{
                 background-color: rgba(255, 255, 255, 0.9);
-                border: 2px solid #00CED1;
+                border: 2px solid {theme.PRIMARY};
                 border-radius: 12px;
-                color: #0A1628;
+                color: {theme.TEXT_PRIMARY};
                 font-family: '{font_family}';
                 font-size: {scale.sc(20)}px;
                 padding: 10px;
             }}
             QLineEdit:focus {{
-                border: 2px solid #0099A8;
+                border: 2px solid {theme.PRIMARY_DARK};
             }}
         """)
 

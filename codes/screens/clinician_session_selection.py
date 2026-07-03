@@ -12,7 +12,7 @@ from PyQt6.QtCore import Qt
 
 from .base_screen import BaseScreen
 from codes.translations import t
-from codes import scale
+from codes import scale, theme
 
 
 class ClinicianSessionSelectionScreen(BaseScreen):
@@ -39,12 +39,12 @@ class ClinicianSessionSelectionScreen(BaseScreen):
             f.setPointSize(scale.sc(28))
             f.setBold(True)
             self._title_label.setFont(f)
-        self._title_label.setStyleSheet("color: #333;")
+        self._title_label.setStyleSheet(f"color: {theme.TEXT_PRIMARY};")
         layout.addWidget(self._title_label)
 
         self.info_label = QLabel("", self)
         self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.info_label.setStyleSheet("color: #444;")
+        self.info_label.setStyleSheet(f"color: {theme.TEXT_SECOND};")
         layout.addWidget(self.info_label)
 
         outer_card = QWidget(self)

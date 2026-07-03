@@ -66,7 +66,7 @@ class RoleSelectionScreen(BaseScreen):
             title_font.setPointSize(scale.sc(22))
             title_font.setBold(True)
             self.title_label.setFont(title_font)
-        self.title_label.setStyleSheet("color: #333; background-color: transparent;")
+        self.title_label.setStyleSheet(f"color: {theme.TEXT_PRIMARY}; background-color: transparent;")
 
         # Subtitle Label
         self.subtitle_label = QLabel(t("role_welcome_subtitle"), self)
@@ -75,7 +75,7 @@ class RoleSelectionScreen(BaseScreen):
             subtitle_font = QFont(self.nunito_font)
             subtitle_font.setPointSize(scale.sc(18))
             self.subtitle_label.setFont(subtitle_font)
-        self.subtitle_label.setStyleSheet("color: #555; margin-top: 10px; background-color: transparent;")
+        self.subtitle_label.setStyleSheet(f"color: {theme.TEXT_SECOND}; margin-top: 10px; background-color: transparent;")
 
         # --- Layout Assembly ---
         layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))

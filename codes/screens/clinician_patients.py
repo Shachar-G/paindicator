@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from .base_screen import BaseScreen
 from codes.translations import t
-from codes import scale
+from codes import scale, theme
 
 
 class ClinicianPatientsScreen(BaseScreen):
@@ -36,12 +36,12 @@ class ClinicianPatientsScreen(BaseScreen):
             f.setPointSize(scale.sc(28))
             f.setBold(True)
             self._title_label.setFont(f)
-        self._title_label.setStyleSheet("color: #333;")
+        self._title_label.setStyleSheet(f"color: {theme.TEXT_PRIMARY};")
         layout.addWidget(self._title_label)
 
         self._subtitle_label = QLabel(t("clinician_patients_subtitle"), self)
         self._subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._subtitle_label.setStyleSheet("color: #444;")
+        self._subtitle_label.setStyleSheet(f"color: {theme.TEXT_SECOND};")
         layout.addWidget(self._subtitle_label)
 
         self.search = QLineEdit(self)
@@ -125,7 +125,7 @@ class ClinicianPatientsScreen(BaseScreen):
 
         if not patients:
             lbl = QLabel(t("clinician_no_patients"), self.list_container)
-            lbl.setStyleSheet("color: #666;")
+            lbl.setStyleSheet(f"color: {theme.TEXT_SECOND};")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.list_layout.addWidget(lbl)
             return

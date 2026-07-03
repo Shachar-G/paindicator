@@ -209,7 +209,7 @@ class InfoScreen(BaseScreen):
 
             elif kind == "body":
                 ss = f"""
-                    color: #333;
+                    color: {theme.TEXT_PRIMARY};
                     font-family: '{font_family}';
                     font-size: {scale.sc(14)}px;
                 """
@@ -221,7 +221,7 @@ class InfoScreen(BaseScreen):
                 bullet = "\u2022"
                 display = f"{bullet}  {text}" if is_rtl else f"  {bullet}  {text}"
                 ss = f"""
-                    color: #333;
+                    color: {theme.TEXT_PRIMARY};
                     font-family: '{font_family}';
                     font-size: {scale.sc(14)}px;
                 """
@@ -234,7 +234,7 @@ class InfoScreen(BaseScreen):
                 indent = "\u2003\u2003"
                 display = f"{circle}  {text}" if is_rtl else f"{indent}{circle}  {text}"
                 ss = f"""
-                    color: #555;
+                    color: {theme.TEXT_SECOND};
                     font-family: '{font_family}';
                     font-size: {scale.sc(13)}px;
                 """

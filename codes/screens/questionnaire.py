@@ -11,7 +11,7 @@ from PyQt6.QtCore import Qt, QDate, QPoint, QEvent, QObject, QTimer
 from PyQt6.QtGui import QFont, QIcon, QPixmap, QPainter, QColor, QPolygon
 from .base_screen import BaseScreen
 from codes.translations import t
-from codes import scale
+from codes import scale, theme
 
 
 # Shared teal scrollbar style — used on QScrollArea and QTextEdit scrollbars
@@ -235,7 +235,7 @@ class QuestionnaireScreen(BaseScreen):
 
         lbl_min = QLabel("1")
         lbl_min.setStyleSheet(
-            f"font-size: {scale.sc(13)}px; color: #999; background: transparent; border: none;"
+            f"font-size: {scale.sc(13)}px; color: {theme.TEXT_HINT}; background: transparent; border: none;"
         )
 
         sl = QSlider(Qt.Orientation.Horizontal)
@@ -285,7 +285,7 @@ class QuestionnaireScreen(BaseScreen):
 
         lbl_max = QLabel("10")
         lbl_max.setStyleSheet(
-            f"font-size: {scale.sc(13)}px; color: #999; background: transparent; border: none;"
+            f"font-size: {scale.sc(13)}px; color: {theme.TEXT_HINT}; background: transparent; border: none;"
         )
 
         # Editable spinbox — no arrows, bidirectionally synced with the slider
@@ -468,7 +468,7 @@ class QuestionnaireScreen(BaseScreen):
 
         lbl_unit = QLabel("yr")
         lbl_unit.setStyleSheet(
-            "font-size: 14px; color: #999; background: transparent; border: none;"
+            f"font-size: {scale.sc(14)}px; color: {theme.TEXT_HINT}; background: transparent; border: none;"
         )
 
         layout.addWidget(spin)
@@ -519,7 +519,7 @@ class QuestionnaireScreen(BaseScreen):
             font.setPointSize(scale.sc(22))
             font.setBold(True)
             lbl.setFont(font)
-            lbl.setStyleSheet("color:#333; margin-top:15px; margin-bottom:5px;")
+            lbl.setStyleSheet(f"color:{theme.TEXT_PRIMARY}; margin-top:15px; margin-bottom:5px;")
             self.form.addWidget(lbl)
             self._tr_labels.append((lbl, key))
 
@@ -528,7 +528,7 @@ class QuestionnaireScreen(BaseScreen):
             font = QFont(self.nunito_font)
             font.setPointSize(scale.sc(16))
             lbl.setFont(font)
-            lbl.setStyleSheet("color:#333; margin-top:8px; margin-bottom:3px;")
+            lbl.setStyleSheet(f"color:{theme.TEXT_PRIMARY}; margin-top:8px; margin-bottom:3px;")
             self.form.addWidget(lbl)
             self._tr_labels.append((lbl, key))
 

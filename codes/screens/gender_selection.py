@@ -8,7 +8,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont
 from .base_screen import BaseScreen
 from codes.translations import t
-from codes import scale
+from codes import scale, theme
 
 
 class GenderSelectionScreen(BaseScreen):
@@ -39,7 +39,7 @@ class GenderSelectionScreen(BaseScreen):
             title_font.setPointSize(scale.sc(28))
             title_font.setBold(True)
             self.title_label.setFont(title_font)
-        self.title_label.setStyleSheet("color: #333;")
+        self.title_label.setStyleSheet(f"color: {theme.TEXT_PRIMARY};")
 
         # --- Layout Assembly ---
         layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
