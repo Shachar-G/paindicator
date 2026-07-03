@@ -337,14 +337,27 @@ class VTKToolBar(QWidget):
 
     # ---------------------------- Palette ---------------------------- #
     def _open_palette_under_button(self):
-        """Place the mark palette under the Mark button."""
+        """Place the mark palette under the Mark button, clamped to the screen."""
         btn_rect = self.mark_btn.rect()
         global_pos = self.mark_btn.mapToGlobal(btn_rect.bottomLeft())
         self.mark_palette_popup.adjustSize()
         popup_w = self.mark_palette_popup.width()
+        popup_h = self.mark_palette_popup.height()
         btn_w = self.mark_btn.width()
         x = global_pos.x() + (btn_w - popup_w) // 2
         y = global_pos.y() + 6
+
+        # Clamp inside the available screen area so the popup never runs
+        # off-screen (it grew wider with the brush-size control).
+        try:
+            screen = self.screen() or self.mark_btn.screen()
+            if screen is not None:
+                avail = screen.availableGeometry()
+                x = max(avail.left() + 4, min(x, avail.right() - popup_w - 4))
+                y = max(avail.top() + 4, min(y, avail.bottom() - popup_h - 4))
+        except Exception:
+            pass
+
         self.mark_palette_popup.move(x, y)
         self.mark_palette_popup.show()
         self.mark_palette_popup.raise_()
@@ -514,8 +527,8 @@ class MarkPalettePopup(QWidget):
 
         from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(scale.sc(16), scale.sc(16), scale.sc(16), scale.sc(16))
-        main_layout.setSpacing(scale.sc(20))
+        main_layout.setContentsMargins(scale.sc(12), scale.sc(12), scale.sc(12), scale.sc(12))
+        main_layout.setSpacing(scale.sc(14))
         main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.group = QButtonGroup(self)
@@ -620,7 +633,7 @@ class MarkPalettePopup(QWidget):
 
         brush_col.addLayout(brush_btn_row)
         brush_col.addWidget(self._brush_label)
-        main_layout.addSpacing(scale.sc(10))
+        main_layout.addSpacing(scale.sc(6))
         main_layout.addLayout(brush_col)
 
         # Apply correct direction for initial language
