@@ -80,6 +80,13 @@ class PatientIdScreen(BaseScreen):
 
         self.setLayout(layout)
 
+    def resizeEvent(self, event):
+        """Cap the input width at 90% of the screen so narrow/portrait displays don't clip it."""
+        super().resizeEvent(event)
+        if hasattr(self, "id_input"):
+            new_w = min(scale.sc(400), max(scale.sc(240), int(self.width() * 0.9)))
+            self.id_input.setMinimumWidth(new_w)
+
     def _refresh_text(self):
         self.label.setText(t("patient_id_title"))
         self.id_input.setPlaceholderText(t("patient_id_placeholder"))

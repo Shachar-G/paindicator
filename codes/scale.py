@@ -26,6 +26,22 @@ def init_scale(available_geometry) -> None:
     _scale = max(_CLAMP_MIN, min(_CLAMP_MAX, raw))
 
 
+def update_scale(available_geometry) -> bool:
+    """
+    Recompute the scale factor when the window moves to a different screen
+    (e.g., tablet docked to an external monitor). Returns True if the factor
+    changed.
+
+    NOTE: stylesheets built at construction time keep their original pixel
+    values; the updated factor applies to widgets and styles created after
+    this call (dialogs, popups, list rows) and to responsive resizeEvent
+    handlers that re-query sc().
+    """
+    old = _scale
+    init_scale(available_geometry)
+    return _scale != old
+
+
 def get() -> float:
     """Return the current scale factor."""
     return _scale

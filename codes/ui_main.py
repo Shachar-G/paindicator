@@ -182,6 +182,25 @@ class MainWindow(QMainWindow):
     # --------------------------------------------------------------
     # Fade Transition Navigation (using FaderWidget)
     # --------------------------------------------------------------
+    def showEvent(self, event):
+        """Connect screen-change tracking once the native window exists."""
+        super().showEvent(event)
+        if not getattr(self, "_screen_change_hooked", False):
+            handle = self.windowHandle()
+            if handle is not None:
+                handle.screenChanged.connect(self._on_screen_changed)
+                self._screen_change_hooked = True
+
+    def _on_screen_changed(self, qscreen):
+        """Recompute the global UI scale when the window moves to another screen."""
+        try:
+            from codes import scale as _scale_mod
+            if qscreen is not None and _scale_mod.update_scale(qscreen.availableGeometry()):
+                self.logger.info(
+                    f"UI scale updated for new screen: factor={_scale_mod.get():.2f}")
+        except Exception as e:
+            self.logger.warning(f"Scale update on screen change failed: {e}")
+
     def navigate_back(self):
         """Return to the previous screen. Does nothing if history is empty."""
         if not self._nav_history:

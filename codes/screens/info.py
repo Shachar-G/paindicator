@@ -159,6 +159,13 @@ class InfoScreen(BaseScreen):
 
         self._build_labels()
 
+    def resizeEvent(self, event):
+        """Keep content width at 95% of available width, capped at scaled 600px."""
+        super().resizeEvent(event)
+        if hasattr(self, "_container"):
+            new_w = min(scale.sc(600), max(scale.sc(300), int(self.width() * 0.95)))
+            self._container.setFixedWidth(new_w)
+
     def _build_labels(self):
         lang = lang_manager.get_language()
         is_rtl = (lang == "he")

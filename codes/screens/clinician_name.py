@@ -79,6 +79,13 @@ class ClinicianNameScreen(BaseScreen):
 
         self.setLayout(layout)
 
+    def resizeEvent(self, event):
+        """Cap the input width at 90% of the screen so narrow/portrait displays don't clip it."""
+        super().resizeEvent(event)
+        if hasattr(self, "name_input"):
+            new_w = min(scale.sc(400), max(scale.sc(240), int(self.width() * 0.9)))
+            self.name_input.setMinimumWidth(new_w)
+
     def _refresh_text(self):
         self.label.setText(t("clinician_name_title"))
         self.name_input.setPlaceholderText(t("clinician_name_placeholder"))
