@@ -212,6 +212,12 @@ def main():
     """
     Initializes and runs the QApplication. This is the sole entry point.
     """
+    # Configure centralized logging as early as possible
+    from codes.logging_setup import setup_logging, get_logger
+    setup_logging()
+    _log = get_logger(__name__)
+    _log.info("PAINDICATOR starting")
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")  # ensures border-radius in stylesheets works on Windows
     app.setWindowIcon(_get_app_icon())

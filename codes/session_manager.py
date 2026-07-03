@@ -3,6 +3,10 @@ import json
 import os
 from datetime import datetime
 
+from codes.logging_setup import get_logger
+
+logger = get_logger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Questionnaire structure — maps questionnaire save-keys → translation keys
@@ -223,7 +227,7 @@ class SessionManager:
         json_path = os.path.join(session_folder, "session.json")
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(self.export_dict(), f, indent=2)
-        print(f"[SessionManager] Saved session → {json_path}")
+        logger.info("Saved session -> %s", json_path)
         return json_path
 
     def load_from_file(self, json_path: str) -> dict:
@@ -246,7 +250,7 @@ class SessionManager:
         folder_name = os.path.basename(session_dir)  # session_29-10-2025_14-48-09
         self.current_session_folder = folder_name
 
-        print(f"[SessionManager] Loaded session ← {json_path}")
+        logger.info("Loaded session <- %s", json_path)
         return self.data
 
     def get_marks(self) -> dict:
@@ -449,7 +453,7 @@ class SessionManager:
         with open(summary_path, "w", encoding="utf-8") as f:
             f.write(content)
 
-        print(f"[SessionManager] Saved human-readable summary → {summary_path}")
+        logger.info("Saved human-readable summary -> %s", summary_path)
         return summary_path
 
     def append_analysis_to_summary(self, session_folder: str, analysis_text: str) -> bool:
@@ -493,10 +497,10 @@ class SessionManager:
             with open(summary_path, "w", encoding="utf-8") as f:
                 f.write(new_content)
 
-            print(f"[SessionManager] Appended analysis → {summary_path}")
+            logger.info("Appended analysis -> %s", summary_path)
             return True
-        except Exception as e:
-            print(f"[SessionManager] append_analysis_to_summary failed: {e}")
+        except Exception:
+            logger.exception("append_analysis_to_summary failed")
             return False
 
     # --------------------------- Listing (for future Session Browser) --------------------------- #
