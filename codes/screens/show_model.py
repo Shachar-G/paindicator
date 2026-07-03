@@ -879,8 +879,49 @@ class ShowModelScreen(QWidget):
 
     def _on_session_saved(self):
         """Called after the toolbar successfully saves — navigate back to home screen."""
+        self._saved_since_paint = True
         if self.main_window:
             self.main_window.navigate_to("role_selection", _push_history=False)
+
+    # ------------------------------------------------------------------
+    # Unsaved-changes guard (queried by MainWindow.navigate_to)
+    # ------------------------------------------------------------------
+    def _has_unsaved_paint(self) -> bool:
+        """
+        True if the user performed paint/erase actions in this visit that have
+        not been saved yet. Uses the undo stack (only user strokes push there),
+        so paint restored from a session in edit mode does NOT count as dirty.
+        """
+        if getattr(self, "_saved_since_paint", False):
+            return False
+        if not self.scene:
+            return False
+        style = getattr(self.scene, "interactor_style", None)
+        if style is None:
+            return False
+        return bool(getattr(style, "undo_stack", None))
+
+    def confirm_leave(self) -> bool:
+        """
+        Ask the user to confirm leaving when there are unsaved pain markings.
+        Returns True to allow navigation, False to stay on this screen.
+        """
+        if not self._has_unsaved_paint():
+            return True
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+            reply = QMessageBox.question(
+                self, "Unsaved Markings",
+                "You have unsaved pain markings.\n"
+                "If you leave now, they will be lost.\n\n"
+                "Leave without saving?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            return reply == QMessageBox.StandardButton.Yes
+        except Exception as e:
+            self.logger.warning(f"[ShowModelScreen] confirm_leave dialog failed: {e}")
+            return True  # never trap the user on a broken dialog
 
     def _show_gesture_help(self):
         """Show the translucent touch-gesture hints overlay over the 3D view."""
@@ -913,6 +954,7 @@ class ShowModelScreen(QWidget):
         self.subject_id = kwargs.get("subject_id", "")
         self.gender = kwargs.get("gender", "")
         self._edit_mode = kwargs.get("_edit_mode", False)
+        self._saved_since_paint = False  # fresh visit — nothing saved yet
         self.logger.info(f"[ShowModelScreen] Loaded with subject_id={self.subject_id}, gender={self.gender}, edit_mode={self._edit_mode}")
 
     def _on_undo_clicked(self):

@@ -1298,9 +1298,18 @@ class RendererScene:
             try:
                 session_manager.save_to_human_readable_file(session_dir)
             except Exception as e:
-                print(f"[RendererScene] ⚠ Failed to save human-readable summary: {e}")
+                # Summary is secondary to session.json — warn but don't fail the save
+                self.logger.exception("Failed to save human-readable summary")
+                try:
+                    QMessageBox.warning(
+                        None, "Partial Save",
+                        "Session data was saved, but the text summary could not be written.\n"
+                        f"Details: {e}"
+                    )
+                except Exception:
+                    pass
 
-            print(f"[RendererScene] ✅ Session fully saved in {session_dir}")
+            self.logger.info("Session fully saved in %s", session_dir)
 
             # --- 6. Notify user ---
             try:
@@ -1309,7 +1318,17 @@ class RendererScene:
                 pass
 
         except Exception as e:
-            print(f"[RendererScene] ❌ Failed to save full session: {e}")
+            # Surface the failure to the user — silent data loss is unacceptable
+            self.logger.exception("Failed to save full session")
+            try:
+                QMessageBox.critical(
+                    None, "Save Failed",
+                    "The session could NOT be saved.\n"
+                    f"Details: {e}\n\n"
+                    "Please check disk space/permissions and try again."
+                )
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------
     # Helper: capture current render window as PNG

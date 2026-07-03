@@ -73,6 +73,65 @@ class TestSessionManagerRoundTrip(unittest.TestCase):
         self.assertEqual(sm.get_marks(), {})
         self.assertEqual(sm.get_paint_v2(), {})
 
+    def test_subject_info_validation(self):
+        sm = SessionManager()
+        # Unsafe chars stripped from subject_id (it becomes a folder name)
+        sm.set_subject_info('ab<>:"/\\|?*cd', gender="MALE")
+        info = sm.data["subject_info"]
+        self.assertEqual(info["subject_id"], "abcd")
+        self.assertEqual(info["gender"], "male")  # normalized to lowercase
+        # Invalid gender is rejected, previous value kept
+        sm.set_subject_info(None, gender="banana")
+        self.assertEqual(sm.data["subject_info"]["gender"], "male")
+
+    def test_questionnaire_validation_clamps(self):
+        sm = SessionManager()
+        sm.set_questionnaire({
+            "age": 999,           # out of range -> clamped to 120
+            "pain peak": -5,      # clamped to 0
+            "pain average": "7",  # numeric string -> accepted as 7
+            "pain anamnesis": "abc",  # non-numeric -> dropped
+            "frequency comment": "free text stays untouched",
+        })
+        q = sm.data["questionnaire"]
+        self.assertEqual(q["age"], 120)
+        self.assertEqual(q["pain peak"], 0)
+        self.assertEqual(q["pain average"], 7)
+        self.assertNotIn("pain anamnesis", q)
+        self.assertEqual(q["frequency comment"], "free text stays untouched")
+
+    def test_load_corrupted_json_raises_clean_error(self):
+        from codes.session_manager import SessionLoadError
+        sm = SessionManager()
+        with tempfile.TemporaryDirectory() as tmp:
+            bad_path = os.path.join(tmp, "session.json")
+            with open(bad_path, "w", encoding="utf-8") as f:
+                f.write("{ this is not valid json !!!")
+            with self.assertRaises(SessionLoadError):
+                sm.load_from_file(bad_path)
+            # Missing file also raises SessionLoadError (not a bare crash)
+            with self.assertRaises(SessionLoadError):
+                sm.load_from_file(os.path.join(tmp, "missing.json"))
+
+    def test_schema_version_written_and_legacy_load_ok(self):
+        sm = SessionManager()
+        sm.start_new_session("p1", gender="female")
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = sm.get_session_folder(base_dir=tmp)
+            json_path = sm.save_to_file(folder)
+            with open(json_path, encoding="utf-8") as f:
+                saved = json.load(f)
+            self.assertEqual(saved["schema_version"], 1)
+
+            # Legacy session without schema_version must still load
+            legacy_path = os.path.join(tmp, "legacy.json")
+            with open(legacy_path, "w", encoding="utf-8") as f:
+                json.dump({"subject_info": {"subject_id": "old"},
+                           "model_data": {}}, f)
+            sm2 = SessionManager()
+            data = sm2.load_from_file(legacy_path)
+            self.assertEqual(data["subject_info"]["subject_id"], "old")
+
 
 class TestDermatomeCoverage(unittest.TestCase):
     def _tiny_inputs(self):

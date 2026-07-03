@@ -205,6 +205,18 @@ class MainWindow(QMainWindow):
         current_widget = self.stacked_widget.currentWidget()
         widget_to_show = self.screens[screen_name]
 
+        # --- Unsaved-changes guard ---
+        # If the current screen defines confirm_leave() and it returns False,
+        # the user chose to stay — abort navigation.
+        if (current_widget is not None and current_widget is not widget_to_show
+                and hasattr(current_widget, "confirm_leave")):
+            try:
+                if not current_widget.confirm_leave():
+                    self.logger.info(f"Navigation to '{screen_name}' cancelled by user (unsaved changes).")
+                    return
+            except Exception as e:
+                self.logger.warning(f"confirm_leave() failed: {e}")
+
         # Push current screen to history so navigate_back() can return here.
         if _push_history:
             current_name = self.current_screen_name()

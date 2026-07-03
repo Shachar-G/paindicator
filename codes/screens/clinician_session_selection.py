@@ -241,9 +241,22 @@ class ClinicianSessionSelectionScreen(BaseScreen):
             self.session_manager.load_from_file(json_path)
         except Exception as e:
             self.logger.error(f"[ClinicianSessionSelection] Failed to load: {e}")
+            self._show_load_error(e)
             return
 
         self.main_window.navigate_to("clinician_view_session")
+
+    def _show_load_error(self, err: Exception):
+        """Inform the clinician that a session file could not be loaded."""
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(
+                self, "Session Load Failed",
+                "This session could not be opened (the file may be corrupted).\n"
+                f"Details: {err}"
+            )
+        except Exception:
+            pass
 
     def _on_edit_session(self, json_path: str, folder_name: str):
         """Open an existing session in the show_model screen for editing."""
@@ -258,6 +271,7 @@ class ClinicianSessionSelectionScreen(BaseScreen):
             self.session_manager.current_session_folder = folder_name
         except Exception as e:
             self.logger.error(f"[ClinicianSessionSelection] Edit: Failed to load: {e}")
+            self._show_load_error(e)
             return
 
         # Determine model path from loaded session gender

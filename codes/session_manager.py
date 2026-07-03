@@ -7,6 +7,38 @@ from codes.logging_setup import get_logger
 
 logger = get_logger(__name__)
 
+# Session JSON schema version. Bump when the structure changes.
+# Sessions without this key are treated as legacy (pre-versioning) and keep
+# loading through the existing fallbacks (e.g. "dermatome_analysis").
+SESSION_SCHEMA_VERSION = 1
+
+# Characters that are unsafe in folder names (subject_id becomes a folder)
+_UNSAFE_ID_CHARS = set('<>:"/\\|?*')
+_MAX_SUBJECT_ID_LEN = 64
+_MAX_NAME_LEN = 128
+
+
+def _sanitize_subject_id(subject_id: str) -> str:
+    """
+    Make subject_id safe for use as a folder name:
+    strip whitespace, drop filesystem-unsafe characters, cap length.
+    Logs when the value had to be changed.
+    """
+    raw = str(subject_id)
+    cleaned = "".join(c for c in raw.strip() if c not in _UNSAFE_ID_CHARS and ord(c) >= 32)
+    cleaned = cleaned[:_MAX_SUBJECT_ID_LEN]
+    if cleaned != raw:
+        logger.warning("subject_id sanitized: %r -> %r", raw, cleaned)
+    return cleaned
+
+
+class SessionSaveError(Exception):
+    """Raised when a session file cannot be written to disk."""
+
+
+class SessionLoadError(Exception):
+    """Raised when a session file cannot be read or parsed."""
+
 
 # ---------------------------------------------------------------------------
 # Questionnaire structure — maps questionnaire save-keys → translation keys
@@ -156,19 +188,68 @@ class SessionManager:
 
     # --------------------------- Setters --------------------------- #
     def set_subject_info(self, subject_id: str, gender: str | None = None, clinician_name: str | None = None):
-        """Update subject info incrementally (ID first, then clinician, then gender)."""
+        """
+        Update subject info incrementally (ID first, then clinician, then gender).
+        Values are validated/sanitized before storage:
+          - subject_id: stripped, filesystem-safe, length-capped
+          - gender: must be "male" or "female" (case-insensitive); otherwise ignored
+          - clinician_name: stripped, length-capped
+        """
         info = dict(self.data.get("subject_info") or {})
         if subject_id is not None:
-            info["subject_id"] = str(subject_id)
+            cleaned = _sanitize_subject_id(subject_id)
+            if cleaned:
+                info["subject_id"] = cleaned
+            else:
+                logger.warning("Rejected empty subject_id after sanitization: %r", subject_id)
         if gender is not None:
-            info["gender"] = gender
+            g = str(gender).strip().lower()
+            if g in ("male", "female"):
+                info["gender"] = g
+            else:
+                logger.warning("Rejected invalid gender value: %r", gender)
         if clinician_name is not None:
-            info["clinician_name"] = clinician_name
+            name = str(clinician_name).strip()[:_MAX_NAME_LEN]
+            info["clinician_name"] = name
         self.data["subject_info"] = info
 
+    # Numeric questionnaire fields and their valid ranges (clamped on save/load)
+    _Q_NUMERIC_RANGES = {
+        "age":            (1, 120),
+        "pain anamnesis": (0, 10),
+        "pain average":   (0, 10),
+        "pain peak":      (0, 10),
+    }
+
+    @classmethod
+    def _validate_questionnaire(cls, answers: dict) -> dict:
+        """
+        Validate/clamp questionnaire values. Non-numeric values for numeric
+        fields and out-of-range numbers are clamped or dropped with a log line
+        instead of being stored as garbage.
+        """
+        validated = dict(answers or {})
+        for key, (lo, hi) in cls._Q_NUMERIC_RANGES.items():
+            if key not in validated:
+                continue
+            try:
+                v = float(validated[key])
+            except (TypeError, ValueError):
+                logger.warning("Questionnaire %r has non-numeric value %r — dropped",
+                               key, validated[key])
+                validated.pop(key)
+                continue
+            clamped = max(lo, min(hi, v))
+            if clamped != v:
+                logger.warning("Questionnaire %r=%s out of range [%s, %s] — clamped to %s",
+                               key, v, lo, hi, clamped)
+            # Keep ints as ints (age, VAS scores are whole numbers)
+            validated[key] = int(clamped) if float(clamped).is_integer() else clamped
+        return validated
+
     def set_questionnaire(self, answers: dict):
-        """Replace questionnaire answers (to be called by the questionnaire screen later)."""
-        self.data["questionnaire"] = dict(answers or {})
+        """Replace questionnaire answers (validated/clamped before storage)."""
+        self.data["questionnaire"] = self._validate_questionnaire(answers)
 
     def set_model_data(self, model_dict: dict):
         """Replace model-related data snapshot (called by renderer before saving)."""
@@ -216,17 +297,39 @@ class SessionManager:
         """Return a complete dict snapshot (with ISO timestamp) for JSON writing."""
         snapshot = dict(self.data)
         snapshot["timestamp"] = datetime.now().isoformat()
+        snapshot["schema_version"] = SESSION_SCHEMA_VERSION
         return snapshot
+
+    @staticmethod
+    def _atomic_write_text(path: str, content: str) -> None:
+        """
+        Write text to `path` atomically: write to a temporary sibling file and
+        os.replace() it into place, so a crash/disk-full mid-write never leaves
+        a truncated file behind.
+        """
+        tmp_path = path + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, path)
 
     def save_to_file(self, session_folder: str) -> str:
         """
         Write session.json into the given folder (folder must exist).
+        The write is atomic (tmp file + rename). Raises SessionSaveError on
+        any I/O failure so callers can inform the user instead of losing data
+        silently.
         Returns the full path to the saved JSON.
         """
-        os.makedirs(session_folder, exist_ok=True)
         json_path = os.path.join(session_folder, "session.json")
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(self.export_dict(), f, indent=2)
+        try:
+            os.makedirs(session_folder, exist_ok=True)
+            content = json.dumps(self.export_dict(), indent=2, ensure_ascii=False)
+            self._atomic_write_text(json_path, content)
+        except (OSError, TypeError, ValueError) as e:
+            logger.exception("Failed to save session -> %s", json_path)
+            raise SessionSaveError(f"Could not save session to {json_path}: {e}") from e
         logger.info("Saved session -> %s", json_path)
         return json_path
 
@@ -236,13 +339,33 @@ class SessionManager:
         - Stores its content into self.data
         - Updates current_session_folder so that subsequent saves
           will overwrite/update the same session folder.
+        Raises SessionLoadError on missing/corrupted files (the previous
+        in-memory data is left untouched in that case).
         Returns the loaded dict.
         """
         if not os.path.exists(json_path):
-            raise FileNotFoundError(f"Session file not found: {json_path}")
+            raise SessionLoadError(f"Session file not found: {json_path}")
 
-        with open(json_path, "r", encoding="utf-8") as f:
-            self.data = json.load(f)
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            logger.exception("Failed to load session <- %s", json_path)
+            raise SessionLoadError(
+                f"Session file is unreadable or corrupted: {json_path} ({e})"
+            ) from e
+
+        if not isinstance(loaded, dict):
+            logger.error("Session file is not a JSON object: %s", json_path)
+            raise SessionLoadError(f"Session file has invalid structure: {json_path}")
+
+        self.data = loaded
+        schema = loaded.get("schema_version")
+        if schema is None:
+            logger.info("Loaded legacy (pre-versioning) session: %s", json_path)
+        elif schema > SESSION_SCHEMA_VERSION:
+            logger.warning("Session schema v%s is newer than supported v%s: %s",
+                           schema, SESSION_SCHEMA_VERSION, json_path)
 
         # Derive the session folder name from the JSON path
         # Example: data/sessions/123456789/session_29-10-2025_14-48-09/session.json
@@ -267,6 +390,7 @@ class SessionManager:
 
         # Robust fallback (convert list or str formats if needed)
         normalized = {}
+        dropped = 0
         try:
             for k, v in dict(marks).items():
                 try:
@@ -274,9 +398,14 @@ class SessionManager:
                     lvl = int(v)
                     normalized[cid] = lvl
                 except Exception:
+                    dropped += 1
                     continue
         except Exception:
-            pass
+            logger.warning("get_marks: marks structure unreadable (%r) — returning empty",
+                           type(marks).__name__)
+            return {}
+        if dropped:
+            logger.warning("get_marks: dropped %d malformed mark entries", dropped)
         return normalized
 
     def get_paint_v2(self) -> dict:
@@ -435,7 +564,6 @@ class SessionManager:
           [עברית]
           ...
         """
-        os.makedirs(session_folder, exist_ok=True)
         summary_path = os.path.join(session_folder, "session_summary.txt")
 
         _SEP = "=" * 40
@@ -450,8 +578,12 @@ class SessionManager:
             + "\n".join(he_lines)
         )
 
-        with open(summary_path, "w", encoding="utf-8") as f:
-            f.write(content)
+        try:
+            os.makedirs(session_folder, exist_ok=True)
+            self._atomic_write_text(summary_path, content)
+        except OSError as e:
+            logger.exception("Failed to save summary -> %s", summary_path)
+            raise SessionSaveError(f"Could not save summary to {summary_path}: {e}") from e
 
         logger.info("Saved human-readable summary -> %s", summary_path)
         return summary_path
