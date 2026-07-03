@@ -1112,6 +1112,21 @@ class RendererScene:
         except Exception as e:
             self.logger.error(f"[RendererScene] ❌ Failed to save session: {e}")
 
+    def set_brush_scale(self, factor: float):
+        """Forward user brush-size adjustment to the interactor style."""
+        if self.interactor_style:
+            try:
+                self.interactor_style.set_brush_scale(factor)
+            except Exception as e:
+                self.logger.warning(f"[RendererScene] set_brush_scale failed: {e}")
+
+    def get_brush_scale(self) -> float:
+        """Current brush scale (1.0 default) — safe when style is missing."""
+        try:
+            return self.interactor_style.get_brush_scale()
+        except Exception:
+            return 1.0
+
     def set_mark_level(self, level: int):
         """Set current paint intensity level (1..3)."""
         if self.interactor_style:

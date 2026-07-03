@@ -294,6 +294,10 @@ STRINGS = {
         "en": "Notes",
         "he": "הערות",
     },
+    "toolbar_brush": {
+        "en": "Brush",
+        "he": "מברשת",
+    },
     "toolbar_mild": {
         "en": "Mild",
         "he": "קל",

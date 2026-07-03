@@ -69,9 +69,10 @@ _SLIDER = """
     }
 """
 
-# Panel width must fit 3 D-pad buttons: 3×32 + 2×3 spacing + 2×8 margins = 118px
-_PANEL_WIDTH = 120
-_BTN_SZ = 32
+# Touch-friendly button size (medical/tablet guideline: >=44-48px).
+# Panel width must fit 3 D-pad buttons: 3×46 + 2×3 spacing + 2×8 margins = 160px
+_PANEL_WIDTH = 162
+_BTN_SZ = 46
 
 
 class NavigationPanel(QWidget):
@@ -118,7 +119,7 @@ class NavigationPanel(QWidget):
         self.zoom_slider.setRange(1, 100)
         self.zoom_slider.setValue(50)
         self.zoom_slider.setMinimumHeight(scale.sc(60))
-        self.zoom_slider.setFixedWidth(scale.sc(20))
+        self.zoom_slider.setFixedWidth(scale.sc(36))  # wider hit area for finger drags
         self.zoom_slider.setStyleSheet(_SLIDER)
         self.zoom_slider.valueChanged.connect(self._on_slider_changed)
         layout.addWidget(self.zoom_slider, stretch=1, alignment=Qt.AlignmentFlag.AlignHCenter)
@@ -164,7 +165,7 @@ class NavigationPanel(QWidget):
         b.setStyleSheet(_BTN)
         # Force identical pixel size for all glyphs so ◀▶ don't render larger than ▲▼
         f = QFont()
-        f.setPixelSize(scale.sc(16))
+        f.setPixelSize(scale.sc(20))
         b.setFont(f)
         return b
 

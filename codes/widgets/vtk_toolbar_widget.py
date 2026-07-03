@@ -4,7 +4,7 @@ from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QPen
 from codes.widgets.comment_popup import CommentPopup
 from codes.config import get_base_icons_path
 from codes.translations import t, lang_manager
-from codes import scale
+from codes import scale, theme
 import os
 
 
@@ -26,8 +26,8 @@ class VTKToolBar(QWidget):
         self._current_mode = "VIEW"                 # VIEW | MARK | ERASE
         self._allow_programmatic_switch = False     # Only True inside _switch_mode calls
 
-        # UI shell
-        self.setFixedHeight(scale.sc(48))
+        # UI shell — height sized for comfortable touch targets (>=48px pills)
+        self.setFixedHeight(scale.sc(62))
         self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet("""
@@ -52,11 +52,13 @@ class VTKToolBar(QWidget):
 
         # --- Styling helper ---
         def style_btn(b: QPushButton, persistent=False):
-            """Apply uniform glassmorphism style; persistent=True keeps pressed highlight."""
+            """Apply uniform glassmorphism style; persistent=True keeps pressed highlight.
+            Buttons are sized as touch targets (>=44-48px tall, scaled)."""
             b.setCheckable(persistent)
             b.setProperty("persistent", persistent)
             if b.text():
                 b.setText(" " + b.text())
+            b.setMinimumHeight(scale.sc(46))
             b.setStyleSheet(f"""
                 QPushButton {{
                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -67,8 +69,7 @@ class VTKToolBar(QWidget):
                     font-weight: 500;
                     border-radius: 8px;
                     border: 1px solid rgba(148, 163, 184, 0.30);
-                    padding: 5px 12px;
-                    box-shadow: 0 0 6px rgba(186, 230, 253, 0.12);
+                    padding: {scale.sc(8)}px {scale.sc(14)}px;
                 }}
                 QPushButton:hover {{
                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -76,23 +77,21 @@ class VTKToolBar(QWidget):
                         stop:1 rgba(0, 206, 209, 0.16));
                     border: 1px solid rgba(0, 206, 209, 0.85);
                     color: #FFFFFF;
-                    box-shadow: 0 0 14px rgba(186, 230, 253, 0.55);
                 }}
                 QPushButton:pressed {{
                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                         stop:0 rgba(0, 206, 209, 0.52),
                         stop:1 rgba(0, 206, 209, 0.32));
-                    border: 1px solid #00CED1;
+                    border: 1px solid {theme.PRIMARY};
                     color: #FFFFFF;
-                    box-shadow: 0 0 20px rgba(186, 230, 253, 0.80);
                 }}
                 QPushButton:checked {{
                     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                        stop:0 rgba(0, 206, 209, 0.40),
-                        stop:1 rgba(0, 206, 209, 0.22));
-                    border: 1px solid #00CED1;
-                    color: #BAE6FD;
-                    box-shadow: 0 0 12px rgba(186, 230, 253, 0.60);
+                        stop:0 rgba(0, 206, 209, 0.62),
+                        stop:1 rgba(0, 206, 209, 0.38));
+                    border: 2px solid {theme.PRIMARY};
+                    color: #FFFFFF;
+                    font-weight: 700;
                 }}
             """)
 
@@ -140,7 +139,7 @@ class VTKToolBar(QWidget):
         style_btn(self.help_btn)
         self.help_btn.setText("?")          # style_btn prepends a space; keep it compact
         self.help_btn.setCheckable(False)
-        self.help_btn.setFixedWidth(scale.sc(40))
+        self.help_btn.setFixedWidth(scale.sc(theme.TOUCH_TARGET_MIN))
         right_row.addWidget(self.help_btn)
         self.help_btn.clicked.connect(self.help_requested.emit)
 
@@ -148,6 +147,7 @@ class VTKToolBar(QWidget):
         self.mark_palette_popup = MarkPalettePopup(self)
         self.mark_palette_popup.hide()
         self.mark_palette_popup.levelSelected.connect(self._on_palette_level_selected)
+        self.mark_palette_popup.brushScaleChanged.connect(self._on_brush_scale_changed)
 
         # ---------------------------- Connections ---------------------------- #
         # Mode clicks (explicit, user-intended)
@@ -215,7 +215,7 @@ class VTKToolBar(QWidget):
         self.save_btn.setIcon(_action_icon("save.svg"))
         self.comment_btn.setIcon(_action_icon("comment_grey.png"))
 
-        _icon_size = QSize(scale.sc(18), scale.sc(18))
+        _icon_size = QSize(scale.sc(24), scale.sc(24))
         for b in [self.view_btn, self.mark_btn, self.erase_btn,
                   self.undo_btn, self.reset_btn, self.clear_btn,
                   self.save_btn, self.comment_btn]:
@@ -367,6 +367,11 @@ class VTKToolBar(QWidget):
             print(f"[Toolbar] set_mark_level({level_id})")
             self.renderer.set_mark_level(level_id)
 
+    def _on_brush_scale_changed(self, factor: float):
+        """Pass user brush-size adjustment to renderer."""
+        if self.renderer and hasattr(self.renderer, "set_brush_scale"):
+            self.renderer.set_brush_scale(factor)
+
     # ---------------------------- Comments ---------------------------- #
     def open_comment_popup(self):
         popup = CommentPopup(self)
@@ -417,6 +422,11 @@ class VTKToolBar(QWidget):
             # Fully reset palette to level 1 — button check AND the visible ring/dot.
             # (Plain setChecked left the cyan ring on the previously picked color.)
             self.mark_palette_popup.select_level(1)
+            # Reset brush to the default size for the new session
+            try:
+                self.mark_palette_popup.reset_brush_scale()
+            except Exception as e:
+                print(f"[Toolbar] reset brush scale failed: {e}")
             # Keep the renderer's paint level in sync with the reset palette so the
             # shown color and the painted color agree on the next session.
             if self.renderer:
@@ -475,6 +485,13 @@ class CircleColorButton(QAbstractButton):
 # ---------------------------- Mark palette ---------------------------- #
 class MarkPalettePopup(QWidget):
     levelSelected = pyqtSignal(int)
+    # Emitted when the user adjusts brush size (multiplier of the default radius)
+    brushScaleChanged = pyqtSignal(float)
+
+    # Brush multiplier bounds/step (matches interactor clamp)
+    _BRUSH_MIN = 0.4
+    _BRUSH_MAX = 3.0
+    _BRUSH_STEP = 0.3
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -504,7 +521,8 @@ class MarkPalettePopup(QWidget):
         self.group = QButtonGroup(self)
         self.group.setExclusive(True)
 
-        LEVEL_COLORS = {1: "#F5C842", 2: "#E8883A", 3: "#D94040"}
+        # Single source of truth for pain severity colors (see codes/theme.py)
+        LEVEL_COLORS = theme.PAIN_LEVEL_COLORS
 
         # Store label refs for translation refresh, and dot indicators
         self._level_labels = []
@@ -516,7 +534,7 @@ class MarkPalettePopup(QWidget):
 
             # Outer wrapper gives us the visible white/cyan ring on selection
             wrapper = QWidget()
-            wrapper.setFixedSize(scale.sc(48), scale.sc(48))
+            wrapper.setFixedSize(scale.sc(56), scale.sc(56))
             wrapper.setObjectName(f"lvl_wrap_{level_id}")
             wrapper.setStyleSheet(f"""
                 QWidget#lvl_wrap_{level_id} {{
@@ -528,7 +546,7 @@ class MarkPalettePopup(QWidget):
             wrapper_inner = QHBoxLayout(wrapper)
             wrapper_inner.setContentsMargins(3, 3, 3, 3)
 
-            btn = CircleColorButton(color, scale.sc(38))
+            btn = CircleColorButton(color, scale.sc(46))
             wrapper_inner.addWidget(btn)
 
             # Small dot indicator below — visible only when selected
@@ -556,8 +574,80 @@ class MarkPalettePopup(QWidget):
         add_color_column(LEVEL_COLORS[3], "toolbar_severe", 3)
         self.group.idClicked.connect(self._on_level_selected)
 
+        # --- Brush size control (vertical column at the end of the row) ---
+        self._brush_scale = 1.0
+        brush_col = QVBoxLayout()
+        brush_col.setSpacing(scale.sc(4))
+
+        self._brush_label = QLabel(t("toolbar_brush"))
+        self._brush_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        brush_btn_row = QHBoxLayout()
+        brush_btn_row.setSpacing(scale.sc(6))
+
+        def _brush_btn(text: str) -> QPushButton:
+            b = QPushButton(text)
+            b.setFixedSize(scale.sc(44), scale.sc(44))
+            b.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: rgba(0, 206, 209, 0.12);
+                    color: #1E293B;
+                    font-size: {scale.sc(20)}px;
+                    font-weight: bold;
+                    border-radius: {scale.sc(22)}px;
+                    border: 1px solid rgba(0, 206, 209, 0.45);
+                }}
+                QPushButton:pressed {{
+                    background-color: rgba(0, 206, 209, 0.40);
+                }}
+            """)
+            return b
+
+        self._brush_minus = _brush_btn("−")
+        self._brush_plus = _brush_btn("+")
+        self._brush_minus.clicked.connect(lambda: self._adjust_brush(-self._BRUSH_STEP))
+        self._brush_plus.clicked.connect(lambda: self._adjust_brush(+self._BRUSH_STEP))
+
+        # Live size preview dot between the buttons
+        self._brush_preview = QLabel("●")
+        self._brush_preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._brush_preview.setFixedWidth(scale.sc(34))
+        self._update_brush_preview()
+
+        brush_btn_row.addWidget(self._brush_minus)
+        brush_btn_row.addWidget(self._brush_preview)
+        brush_btn_row.addWidget(self._brush_plus)
+
+        brush_col.addLayout(brush_btn_row)
+        brush_col.addWidget(self._brush_label)
+        main_layout.addSpacing(scale.sc(10))
+        main_layout.addLayout(brush_col)
+
         # Apply correct direction for initial language
         self._update_layout_direction()
+
+    # ---------------------------- Brush size ---------------------------- #
+    def _adjust_brush(self, delta: float):
+        new_scale = max(self._BRUSH_MIN, min(self._BRUSH_MAX, self._brush_scale + delta))
+        if abs(new_scale - self._brush_scale) < 1e-6:
+            return
+        self._brush_scale = new_scale
+        self._update_brush_preview()
+        self.brushScaleChanged.emit(self._brush_scale)
+
+    def _update_brush_preview(self):
+        # Map scale [0.4..3.0] to a visible dot size [8..26px]
+        px = int(scale.sc(8 + (self._brush_scale - self._BRUSH_MIN)
+                          / (self._BRUSH_MAX - self._BRUSH_MIN) * 18))
+        self._brush_preview.setStyleSheet(
+            f"color: #1E293B; font-size: {px}px; background: transparent; border: none;"
+        )
+
+    def reset_brush_scale(self):
+        """Reset brush to default size (used on new session)."""
+        self._brush_scale = 1.0
+        self._update_brush_preview()
+        self.brushScaleChanged.emit(1.0)
 
     def _update_layout_direction(self):
         is_rtl = lang_manager.get_language() == "he"
@@ -567,6 +657,7 @@ class MarkPalettePopup(QWidget):
     def refresh_text(self):
         for lbl, key in self._level_labels:
             lbl.setText(t(key))
+        self._brush_label.setText(t("toolbar_brush"))
         self._update_layout_direction()
 
     def _on_level_selected(self, level_id: int):

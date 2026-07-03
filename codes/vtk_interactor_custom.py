@@ -178,12 +178,15 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
         # -----------------------------
         # Adaptive brush radius (stable across model scale)
         # -----------------------------
+        self._brush_scale = 1.0  # user-adjustable multiplier (see set_brush_scale)
         self.brush_radius = self._default_brush_radius()
 
         # Normal gating threshold: keep points whose normal faces camera enough.
-        # Lower value = more permissive (0.05 lets near-edge vertices be painted,
-        # improving stylus responsiveness at model edges).
-        self._normal_gate_threshold = 0.05
+        # Lower value = more permissive. 0.02 lets silhouette/near-edge vertices
+        # be painted (previous 0.05 created a perceptible "dead zone" at model
+        # edges) while still rejecting back-facing vertices (dot < 0), so paint
+        # cannot go through the body. Tunable via set_normal_gate_threshold().
+        self._normal_gate_threshold = 0.02
 
         # -----------------------------
         # Camera baseline (make sure not sideways)
@@ -221,6 +224,35 @@ class CustomInteractorStyle(vtk.vtkInteractorStyleTrackballCamera):
         self.AddObserver("RightButtonReleaseEvent", self.OnRightButtonUp)
 
         self.logger.info("[VTK] CustomInteractorStyle initialized (PaintV2).")
+
+    # ------------------------------------------------------------------
+    # Runtime tuning API (brush size / edge sensitivity)
+    # ------------------------------------------------------------------
+    def set_brush_scale(self, factor: float):
+        """
+        Scale the adaptive brush radius. 1.0 = default (0.9% of model
+        diagonal); clamped to [0.4, 3.0]. Does not touch the painting
+        algorithm — only the pick radius.
+        """
+        try:
+            f = max(0.4, min(3.0, float(factor)))
+        except (TypeError, ValueError):
+            return
+        self._brush_scale = f
+        self.brush_radius = self._default_brush_radius() * f
+        self.logger.debug(f"[VTK] brush scale set to {f:.2f} (radius={self.brush_radius:.4f})")
+
+    def get_brush_scale(self) -> float:
+        return self._brush_scale
+
+    def set_normal_gate_threshold(self, value: float):
+        """Tune edge-paint sensitivity. Clamped to [0.0, 0.5]; 0.0 = paint any
+        camera-facing vertex, higher = stricter gating."""
+        try:
+            v = max(0.0, min(0.5, float(value)))
+        except (TypeError, ValueError):
+            return
+        self._normal_gate_threshold = v
 
     # ------------------------------------------------------------
     # Normals

@@ -487,6 +487,9 @@ class ShowModelScreen(QWidget):
     and connecting toolbar actions to the RendererScene logic.
     """
 
+    # True after the gesture-hints overlay was auto-shown once this app run
+    _gesture_hint_shown = False
+
     def __init__(self, model_path: str = None, main_window=None, patient_data=None,
                  session_manager=None, parent=None):
         super().__init__(parent)
@@ -677,6 +680,13 @@ class ShowModelScreen(QWidget):
             self.logger.info("[ShowModelScreen] Re-registered VTK widget for touch events.")
         except Exception as e:
             self.logger.error(f"[ShowModelScreen] Touch re-registration failed: {e}")
+
+        # Gesture discoverability: auto-show the touch-gesture hints overlay the
+        # first time the 3D screen opens in this app run (tap anywhere to close).
+        # Later visits rely on the "?" toolbar button.
+        if not ShowModelScreen._gesture_hint_shown:
+            ShowModelScreen._gesture_hint_shown = True
+            QTimer.singleShot(700, self._show_gesture_help)
 
     # ----------------------------------------------------------------------
     # Toolbar action handlers
