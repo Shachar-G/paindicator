@@ -1013,19 +1013,22 @@ class RendererScene:
 
             # RGBA array: unpainted vertices are fully transparent (alpha=0),
             # so only pain markings are visible — no ghost body underneath.
-            colors = vtk.vtkUnsignedCharArray()
-            colors.SetNumberOfComponents(4)
-            colors.SetNumberOfTuples(n_points)
-            colors.SetName("OverlayColors")
+            # Built with numpy (pre-zeroed + vectorized level mapping) instead
+            # of two O(n) Python SetTuple4 loops.
+            import numpy as np
+            from vtk.util import numpy_support
 
-            for pid in range(n_points):
-                colors.SetTuple4(pid, 0, 0, 0, 0)   # fully transparent
-
+            rgba = np.zeros((n_points, 4), dtype=np.uint8)  # transparent by default
             usable = min(len(point_levels), n_points)
-            for pid in range(usable):
-                lvl = int(point_levels[pid])
-                if lvl > 0 and lvl in _OVERLAY_COLORS:
-                    colors.SetTuple4(pid, *_OVERLAY_COLORS[lvl])
+            if usable > 0:
+                levels = np.asarray(point_levels[:usable], dtype=np.int64)
+                for lvl, color in _OVERLAY_COLORS.items():
+                    rgba[:usable][levels == lvl] = color
+
+            colors = numpy_support.numpy_to_vtk(rgba, deep=True,
+                                                array_type=vtk.VTK_UNSIGNED_CHAR)
+            colors.SetNumberOfComponents(4)
+            colors.SetName("OverlayColors")
 
             overlay_poly.GetPointData().SetScalars(colors)
 
