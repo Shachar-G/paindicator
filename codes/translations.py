@@ -367,6 +367,36 @@ STRINGS = {
         "he": "חזרה",
     },
 
+    # --- Delete actions ---
+    "delete_btn": {
+        "en": "Delete",
+        "he": "מחק",
+    },
+    "delete_patient_title": {
+        "en": "Delete Patient",
+        "he": "מחיקת מטופל",
+    },
+    "delete_patient_confirm": {
+        "en": "Permanently delete ALL data for patient {patient_id}?\nThis includes {sessions_label} and cannot be undone.",
+        "he": "למחוק לצמיתות את כל הנתונים של מטופל {patient_id}?\nכולל {sessions_label}. פעולה זו אינה הפיכה.",
+    },
+    "delete_session_title": {
+        "en": "Delete Session",
+        "he": "מחיקת מפגש",
+    },
+    "delete_session_confirm": {
+        "en": "Permanently delete session {label}?\nThis cannot be undone.",
+        "he": "למחוק לצמיתות את מפגש {label}?\nפעולה זו אינה הפיכה.",
+    },
+    "delete_error_title": {
+        "en": "Delete Failed",
+        "he": "מחיקה נכשלה",
+    },
+    "delete_error_msg": {
+        "en": "Could not delete the data. Please try again.",
+        "he": "לא ניתן למחוק את הנתונים. נסה שנית.",
+    },
+
     # --- Clinician Session Selection Screen ---
     "clinician_session_edit": {
         "en": "Edit",

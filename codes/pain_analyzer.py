@@ -3,6 +3,12 @@
 # AI-based clinical decision support — pain pattern analyzer.
 # Returns a formatted text report based on dermatome distribution and questionnaire data.
 
+# Minimum painted-dermatome data considered sufficient for pattern analysis.
+# Below this, the report explicitly states that data is insufficient instead
+# of presenting patterns computed from one or two stray marks.
+_MIN_DERMATOMES_FOR_ANALYSIS = 1
+_MIN_PAINTED_VERTICES_FOR_ANALYSIS = 25
+
 
 def analyze_pain(patient_data):
     dermatomes = patient_data.get("dermatomes", [])

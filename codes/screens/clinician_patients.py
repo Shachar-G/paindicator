@@ -1,8 +1,12 @@
 # codes/screens/clinician_patients.py
 # NOTE: All comments are in English only.
 
+import os
+import shutil
+
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QLabel, QLineEdit, QScrollArea, QWidget, QPushButton
+    QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QScrollArea, QWidget,
+    QPushButton, QMessageBox, QSizePolicy
 )
 from PyQt6.QtCore import Qt
 from .base_screen import BaseScreen
@@ -133,8 +137,16 @@ class ClinicianPatientsScreen(BaseScreen):
         for p in patients:
             pid = str(p.get("patient_id", ""))
             count = len(p.get("sessions") or [])
-            btn = QPushButton(f"{pid}   •   {count} {t('sessions_word')}", self.list_container)
+            patient_path = p.get("path", "")
+
+            row_widget = QWidget(self.list_container)
+            row_layout = QHBoxLayout(row_widget)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(8)
+
+            btn = QPushButton(f"{pid}   •   {count} {t('sessions_word')}", row_widget)
             btn.setMinimumHeight(scale.sc(60))
+            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: #FFFFFF;
@@ -148,7 +160,29 @@ class ClinicianPatientsScreen(BaseScreen):
                 QPushButton:pressed {{ background-color: #E0F0F4; }}
             """)
             btn.clicked.connect(lambda _, patient_id=pid: self._select_patient(patient_id))
-            self.list_layout.addWidget(btn)
+
+            del_btn = QPushButton(t("delete_btn"), row_widget)
+            del_btn.setFixedSize(scale.sc(80), scale.sc(60))
+            del_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #FFFFFF;
+                    border-radius: 12px;
+                    border: 1px solid #E53935;
+                    color: #E53935;
+                    font-size: {scale.sc(14)}px;
+                    font-weight: bold;
+                }}
+                QPushButton:hover {{ background-color: rgba(229,57,53,0.08); }}
+                QPushButton:pressed {{ background-color: rgba(229,57,53,0.18); }}
+            """)
+            del_btn.clicked.connect(
+                lambda _, patient_id=pid, path=patient_path, n=count:
+                    self._confirm_delete_patient(patient_id, path, n)
+            )
+
+            row_layout.addWidget(btn, stretch=1)
+            row_layout.addWidget(del_btn)
+            self.list_layout.addWidget(row_widget)
 
         self.list_layout.addStretch(1)
 
@@ -157,3 +191,25 @@ class ClinicianPatientsScreen(BaseScreen):
         self.patient_data["patient_id"] = patient_id
         # Navigate to clinician session list
         self.main_window.navigate_to("clinician_session_selection")
+
+    def _confirm_delete_patient(self, patient_id: str, patient_path: str, session_count: int):
+        sessions_label = f"{session_count} session{'s' if session_count != 1 else ''}"
+        reply = QMessageBox.question(
+            self,
+            t("delete_patient_title"),
+            t("delete_patient_confirm").format(patient_id=patient_id, sessions_label=sessions_label),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            if patient_path and os.path.isdir(patient_path):
+                shutil.rmtree(patient_path)
+        except Exception as e:
+            QMessageBox.critical(self, t("delete_error_title"), f"{t('delete_error_msg')}\n{e}")
+            return
+
+        self._load_patients()
+        self._refresh_list()

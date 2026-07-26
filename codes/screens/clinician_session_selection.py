@@ -3,10 +3,12 @@
 
 import os
 import json
+import shutil
 from datetime import datetime
 
 from PyQt6.QtWidgets import (
-    QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QWidget, QPushButton, QSizePolicy
+    QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QWidget, QPushButton,
+    QSizePolicy, QMessageBox
 )
 from PyQt6.QtCore import Qt
 
@@ -222,14 +224,74 @@ class ClinicianSessionSelectionScreen(BaseScreen):
             QPushButton:pressed {{ background-color: rgba(0,206,209,0.25); }}
         """)
 
+        del_btn = QPushButton(t("delete_btn"), self)
+        del_btn.setFixedSize(scale.sc(80), scale.sc(90))
+        del_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #FFFFFF;
+                border-radius: 12px;
+                border: 1px solid #E53935;
+                color: #E53935;
+                font-size: {scale.sc(14)}px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{ background-color: rgba(229,57,53,0.08); }}
+            QPushButton:pressed {{ background-color: rgba(229,57,53,0.18); }}
+        """)
+
         json_path = entry.get("json")
         folder = meta.get("folder", "")
+        session_num = meta.get("session_number", "?")
+        date_str = meta.get("date_str", "")
         session_btn.clicked.connect(lambda _, p=json_path: self._on_session_selected(p))
         edit_btn.clicked.connect(lambda _, p=json_path, f=folder: self._on_edit_session(p, f))
+        del_btn.clicked.connect(
+            lambda _, p=json_path, n=session_num, d=date_str:
+                self._confirm_delete_session(p, n, d)
+        )
 
         row_layout.addWidget(session_btn, stretch=1)
         row_layout.addWidget(edit_btn)
+        row_layout.addWidget(del_btn)
         self.list_layout.addWidget(row_widget)
+
+    def _confirm_delete_session(self, json_path: str, session_num, date_str: str):
+        label = f"#{session_num}" + (f"  ({date_str})" if date_str else "")
+        reply = QMessageBox.question(
+            self,
+            t("delete_session_title"),
+            t("delete_session_confirm").format(label=label),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        session_folder = os.path.dirname(json_path) if json_path else ""
+        try:
+            if session_folder and os.path.isdir(session_folder):
+                shutil.rmtree(session_folder)
+        except Exception as e:
+            QMessageBox.critical(self, t("delete_error_title"), f"{t('delete_error_msg')}\n{e}")
+            return
+
+        # If the patient folder is now empty, remove it too
+        patient_folder = os.path.dirname(session_folder) if session_folder else ""
+        if patient_folder and os.path.isdir(patient_folder):
+            try:
+                remaining = [
+                    d for d in os.listdir(patient_folder)
+                    if os.path.isdir(os.path.join(patient_folder, d))
+                ]
+                if not remaining:
+                    shutil.rmtree(patient_folder)
+                    # Navigate back since this patient no longer exists
+                    self.main_window.navigate_back()
+                    return
+            except Exception:
+                pass
+
+        self._refresh_sessions()
 
     def _on_session_selected(self, json_path: str):
         if not json_path or not os.path.exists(json_path):
